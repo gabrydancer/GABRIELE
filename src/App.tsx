@@ -207,23 +207,15 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
-      {/* Sidebar */}
-      <motion.aside 
-        initial={false}
-        animate={{ width: isSidebarOpen ? 260 : 80 }}
-        className="bg-white border-r border-slate-200 flex flex-col z-20 shadow-sm"
-      >
-        <div className="p-6 flex items-center justify-between border-b border-slate-50">
-          <div className={cn("flex items-center overflow-hidden", !isSidebarOpen && "justify-center w-full")}>
-            {isSidebarOpen && (
-              <span className="font-bold text-xl tracking-tight text-slate-800 whitespace-nowrap uppercase">
-                GABRIELE CHIESA
-              </span>
-            )}
+      {/* Sidebar - Icon Only */}
+      <aside className="w-20 bg-white border-r border-slate-200 flex flex-col z-20 shadow-sm">
+        <div className="p-6 flex items-center justify-center border-b border-slate-50">
+          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black text-xs">
+            GC
           </div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1 mt-6">
+        <nav className="flex-1 px-3 space-y-2 mt-6">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeView === item.id;
@@ -232,33 +224,31 @@ export default function App() {
                 key={item.id}
                 onClick={() => setActiveView(item.id as View)}
                 className={cn(
-                  "w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 group relative",
+                  "w-full flex flex-col items-center justify-center gap-1 py-3 rounded-lg transition-all duration-200 group relative",
                   isActive 
                     ? "bg-slate-50 text-indigo-600 border-r-4 border-indigo-600" 
                     : "text-slate-500 hover:bg-slate-50 hover:text-indigo-600"
                 )}
+                title={item.label}
               >
-                <Icon size={18} className={cn("shrink-0", isActive ? "text-indigo-600" : "group-hover:text-indigo-600")} />
-                {isSidebarOpen && <span className={cn("text-sm font-semibold tracking-tight", isActive ? "text-slate-900" : "")}>{item.label}</span>}
-                {!isSidebarOpen && (
-                  <div className="absolute left-16 bg-slate-900 text-white px-2 py-1 rounded text-[10px] uppercase font-bold tracking-widest opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                    {item.label}
-                  </div>
+                <Icon size={20} className={cn("shrink-0", isActive ? "text-indigo-600" : "group-hover:text-indigo-600")} />
+                <span className="text-[8px] font-bold uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">
+                  {item.label}
+                </span>
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-600 rounded-r-lg" />
                 )}
               </button>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-slate-100">
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="w-full flex items-center justify-center p-3 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors"
-          >
-            {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
+        <div className="p-4 border-t border-slate-100 flex justify-center">
+          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400">
+            {preferences.notifyAttendance ? 'ON' : 'OFF'}
+          </div>
         </div>
-      </motion.aside>
+      </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 bg-slate-50/50">
