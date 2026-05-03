@@ -232,7 +232,10 @@ export default function App() {
                 title={item.label}
               >
                 <Icon size={20} className={cn("shrink-0", isActive ? "text-indigo-600" : "group-hover:text-indigo-600")} />
-                <span className="text-[8px] font-bold uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className={cn(
+                  "text-[9px] font-bold uppercase tracking-tight text-center mt-0.5",
+                  isActive ? "text-indigo-600" : "text-slate-400 group-hover:text-indigo-600"
+                )}>
                   {item.label}
                 </span>
                 {isActive && (
