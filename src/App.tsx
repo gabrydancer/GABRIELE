@@ -224,22 +224,25 @@ export default function App() {
                 key={item.id}
                 onClick={() => setActiveView(item.id as View)}
                 className={cn(
-                  "w-full flex flex-col items-center justify-center gap-1 py-3 rounded-lg transition-all duration-200 group relative",
+                  "w-full flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl transition-all duration-300 group relative px-1",
                   isActive 
-                    ? "bg-slate-50 text-indigo-600 border-r-4 border-indigo-600" 
+                    ? "bg-indigo-50/80 text-indigo-700 shadow-[inset_0_0_0_1px_rgba(79,70,229,0.1)]" 
                     : "text-slate-500 hover:bg-slate-50 hover:text-indigo-600"
                 )}
                 title={item.label}
               >
-                <Icon size={20} className={cn("shrink-0", isActive ? "text-indigo-600" : "group-hover:text-indigo-600")} />
+                <Icon size={20} className={cn("shrink-0 transition-transform duration-300", isActive ? "text-indigo-600 scale-110" : "group-hover:text-indigo-600 group-hover:scale-110")} />
                 <span className={cn(
-                  "text-[9px] font-bold uppercase tracking-tight text-center mt-0.5",
-                  isActive ? "text-indigo-600" : "text-slate-400 group-hover:text-indigo-600"
+                  "text-[9px] font-black uppercase tracking-wider text-center leading-none",
+                  isActive ? "text-indigo-700" : "text-slate-400 group-hover:text-indigo-600"
                 )}>
                   {item.label}
                 </span>
                 {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-600 rounded-r-lg" />
+                  <motion.div 
+                    layoutId="activeNav"
+                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-10 bg-indigo-600 rounded-r-full shadow-[2px_0_10px_rgba(79,70,229,0.3)]" 
+                  />
                 )}
               </button>
             );
