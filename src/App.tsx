@@ -210,8 +210,8 @@ export default function App() {
       {/* Sidebar - Icon Only */}
       <aside className="w-20 bg-white border-r border-slate-200 flex flex-col z-20 shadow-sm">
         <div className="p-6 flex items-center justify-center border-b border-slate-50">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black text-xs">
-            GC
+          <div className="w-8 h-8 bg-indigo-600/10 rounded-lg flex items-center justify-center text-indigo-600">
+            <LayoutDashboard size={20} />
           </div>
         </div>
 

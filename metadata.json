@@ -1,6 +1,6 @@
 {
-  "name": "Gabriele Chiesa Manager",
-  "description": "A comprehensive app to manage students, track course attendance, record payments, and generate detailed reports.",
+  "name": "Gabriele Chiesa Management",
+  "description": "Comprehensive school management app with Android support, tracking students, attendance, payments, and expenses.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }
