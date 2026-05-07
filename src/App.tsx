@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Users, 
   BookOpen, 
@@ -24,7 +24,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useStorage } from './hooks/useStorage';
 import { Person, Course, AttendanceRecord, PaymentRecord, ExpenseRecord, Notification, UserPreferences } from './types';
 import { cn } from './lib/utils';
-import { useEffect } from 'react';
+import { api } from './services/api';
 
 // Views
 import PeopleList from './components/PeopleList';
@@ -57,6 +57,48 @@ export default function App() {
     notifyAttendance: true,
     notifyCourses: true
   });
+
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
+
+  // Server Sync: Load
+  useEffect(() => {
+    const loadAppData = async () => {
+      setSyncStatus('syncing');
+      const data = await api.getData();
+      if (data) {
+        if (data.people) setPeople(data.people);
+        if (data.courses) setCourses(data.courses);
+        if (data.attendance) setAttendance(data.attendance);
+        if (data.payments) setPayments(data.payments);
+        if (data.expenses) setExpenses(data.expenses);
+        setSyncStatus('idle');
+      } else {
+        setSyncStatus('error');
+      }
+      setIsInitialLoad(false);
+    };
+    loadAppData();
+  }, []);
+
+  // Server Sync: Save
+  useEffect(() => {
+    if (isInitialLoad) return;
+
+    const saveTimeout = setTimeout(async () => {
+      setSyncStatus('syncing');
+      const success = await api.saveData({
+        people,
+        courses,
+        attendance,
+        payments,
+        expenses
+      });
+      setSyncStatus(success ? 'idle' : 'error');
+    }, 1500);
+
+    return () => clearTimeout(saveTimeout);
+  }, [people, courses, attendance, payments, expenses, isInitialLoad]);
 
   // Notification engine
   useEffect(() => {
@@ -294,7 +336,17 @@ export default function App() {
         </div>
 
         <footer className="h-8 bg-white border-t border-slate-200 px-6 flex items-center justify-between shrink-0">
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Status: Ready</p>
+          <div className="flex items-center gap-3">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+              Status: {syncStatus === 'syncing' ? 'Sincronizzazione...' : syncStatus === 'error' ? 'Errore Sync' : 'Sincronizzato'}
+            </p>
+            {syncStatus === 'syncing' && (
+              <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
+            )}
+            {syncStatus === 'error' && (
+              <div className="w-1.5 h-1.5 bg-rose-500 rounded-full"></div>
+            )}
+          </div>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
             {new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
           </p>

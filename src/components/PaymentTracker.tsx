@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { CreditCard, Plus, Search, Trash2, Calendar, User, Euro, Filter, ChevronDown, Check, X } from 'lucide-react';
+import { CreditCard, Plus, Search, Trash2, Calendar, User, Euro, Filter, ChevronDown, Check, X, FileText, Edit2 } from 'lucide-react';
 import { Person, Course, PaymentRecord } from '../types';
 import { cn } from '../lib/utils';
+import ReceiptModal from './ReceiptModal';
 
 interface PaymentTrackerProps {
   payments: PaymentRecord[];
@@ -12,9 +13,11 @@ interface PaymentTrackerProps {
 
 export default function PaymentTracker({ payments, setPayments, people, courses }: PaymentTrackerProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCourse, setFilterCourse] = useState('all');
   const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(null);
+  const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] = useState<PaymentRecord | null>(null);
 
   const [formData, setFormData] = useState({
     studentId: '',
@@ -47,13 +50,52 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
     e.preventDefault();
     if (!formData.studentId) return alert('Seleziona uno studente');
     
-    const newPayment: PaymentRecord = {
-      id: crypto.randomUUID(),
-      ...formData,
-      amount: Number(formData.amount)
-    };
-    setPayments([...payments, newPayment]);
+    if (editingPaymentId) {
+      setPayments(payments.map(p => p.id === editingPaymentId ? {
+        ...p,
+        ...formData,
+        amount: Number(formData.amount)
+      } : p));
+    } else {
+      const nextReceiptNumber = payments.length > 0 
+        ? Math.max(...payments.map(p => p.receiptNumber || 0)) + 1 
+        : 1;
+
+      const newPayment: PaymentRecord = {
+        id: crypto.randomUUID(),
+        ...formData,
+        amount: Number(formData.amount),
+        receiptNumber: nextReceiptNumber
+      };
+      setPayments([...payments, newPayment]);
+    }
+    
     setIsModalOpen(false);
+    setEditingPaymentId(null);
+    setFormData({
+      studentId: '',
+      courseId: '',
+      amount: '',
+      description: '',
+      date: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const handleEdit = (payment: PaymentRecord) => {
+    setEditingPaymentId(payment.id);
+    setFormData({
+      studentId: payment.studentId,
+      courseId: payment.courseId || '',
+      amount: payment.amount.toString(),
+      description: payment.description,
+      date: payment.date
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingPaymentId(null);
     setFormData({
       studentId: '',
       courseId: '',
@@ -135,6 +177,7 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">N° Ricevuta</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Contribuente</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Causale</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Data</th>
@@ -148,6 +191,11 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
                 const course = courses.find(c => c.id === p.courseId);
                 return (
                   <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                        {p.receiptNumber ? `#${p.receiptNumber}` : '-'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
                         <div className="w-9 h-9 rounded bg-white border border-slate-200 text-slate-400 flex items-center justify-center text-[10px] font-bold transition-all group-hover:border-indigo-500 group-hover:text-indigo-600 shadow-sm">
@@ -175,7 +223,21 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
                       <span className="font-bold text-emerald-600 text-sm tabular-nums">€{p.amount.toFixed(2)}</span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="relative inline-flex items-center justify-end">
+                      <div className="relative inline-flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => setSelectedPaymentForReceipt(p)}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded transition-all"
+                          title="Vedi Ricevuta"
+                        >
+                          <FileText size={14} />
+                        </button>
+                        <button 
+                          onClick={() => handleEdit(p)}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded transition-all"
+                          title="Modifica Pagamento"
+                        >
+                          <Edit2 size={14} />
+                        </button>
                         {showConfirmDelete === p.id && (
                           <div className="absolute right-0 bottom-full mb-2 z-30 bg-slate-900 text-white p-2 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
                             <span className="text-[9px] font-bold uppercase whitespace-nowrap ml-1">Annulla pagamento?</span>
@@ -222,14 +284,16 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={() => setIsModalOpen(false)} />
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={handleCloseModal} />
           <div className="bg-white rounded-xl w-full max-w-lg relative z-10 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 border border-slate-200">
             <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-6 bg-indigo-600 rounded-full"></div>
-                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Nuova Registrazione</h2>
+                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest">
+                  {editingPaymentId ? 'Modifica Registrazione' : 'Nuova Registrazione'}
+                </h2>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+              <button onClick={handleCloseModal} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
                 <X size={18} className="text-slate-400" />
               </button>
             </div>
@@ -299,7 +363,7 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
               <div className="flex gap-4 pt-4">
                 <button 
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={handleCloseModal}
                   className="flex-1 px-6 py-3 border border-slate-200 rounded-lg font-bold text-xs text-slate-400 hover:bg-slate-50 transition-colors uppercase tracking-widest"
                 >
                   Annulla
@@ -309,12 +373,22 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
                   className="flex-1 px-6 py-3 bg-slate-900 text-white rounded-lg font-bold text-xs hover:bg-slate-800 transition-all uppercase tracking-widest shadow-lg shadow-slate-200 flex items-center justify-center gap-2"
                 >
                   <Check size={14} />
-                  Conferma
+                  {editingPaymentId ? 'Salva Modifiche' : 'Conferma'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {selectedPaymentForReceipt && (
+        <ReceiptModal 
+          isOpen={!!selectedPaymentForReceipt}
+          onClose={() => setSelectedPaymentForReceipt(null)}
+          payment={selectedPaymentForReceipt}
+          student={people.find(p => p.id === selectedPaymentForReceipt.studentId)}
+          course={courses.find(c => c.id === selectedPaymentForReceipt.courseId)}
+        />
       )}
     </div>
   );

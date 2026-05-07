@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Trash2, Calendar, ShoppingBag, Euro, Filter, Receipt, Check, X } from 'lucide-react';
+import { Plus, Search, Trash2, Calendar, ShoppingBag, Euro, Filter, Receipt, Check, X, Edit2 } from 'lucide-react';
 import { ExpenseRecord } from '../types';
 import { cn } from '../lib/utils';
 
@@ -21,6 +21,7 @@ const CATEGORIES = [
 
 export default function ExpenseTracker({ expenses, setExpenses }: ExpenseTrackerProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(null);
@@ -35,13 +36,45 @@ export default function ExpenseTracker({ expenses, setExpenses }: ExpenseTracker
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const newExpense: ExpenseRecord = {
-      id: crypto.randomUUID(),
-      ...formData,
-      amount: Number(formData.amount)
-    };
-    setExpenses([...expenses, newExpense]);
+    if (editingExpenseId) {
+      setExpenses(expenses.map(exp => exp.id === editingExpenseId ? {
+        ...exp,
+        ...formData,
+        amount: Number(formData.amount)
+      } : exp));
+    } else {
+      const newExpense: ExpenseRecord = {
+        id: crypto.randomUUID(),
+        ...formData,
+        amount: Number(formData.amount)
+      };
+      setExpenses([...expenses, newExpense]);
+    }
+    
     setIsModalOpen(false);
+    setEditingExpenseId(null);
+    setFormData({
+      category: CATEGORIES[0],
+      amount: '',
+      description: '',
+      date: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const handleEdit = (expense: ExpenseRecord) => {
+    setEditingExpenseId(expense.id);
+    setFormData({
+      category: expense.category,
+      amount: expense.amount.toString(),
+      description: expense.description,
+      date: expense.date
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingExpenseId(null);
     setFormData({
       category: CATEGORIES[0],
       amount: '',
@@ -148,7 +181,14 @@ export default function ExpenseTracker({ expenses, setExpenses }: ExpenseTracker
                     <span className="font-bold text-rose-600 text-sm tabular-nums">€{e.amount.toFixed(2)}</span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="relative inline-flex items-center justify-end">
+                    <div className="relative inline-flex items-center justify-end gap-2">
+                      <button 
+                        onClick={() => handleEdit(e)}
+                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded transition-all"
+                        title="Modifica Uscita"
+                      >
+                        <Edit2 size={14} />
+                      </button>
                       {showConfirmDelete === e.id && (
                         <div className="absolute right-0 bottom-full mb-2 z-30 bg-slate-900 text-white p-2 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
                           <span className="text-[9px] font-bold uppercase whitespace-nowrap ml-1">Annulla spesa?</span>
@@ -194,14 +234,16 @@ export default function ExpenseTracker({ expenses, setExpenses }: ExpenseTracker
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={() => setIsModalOpen(false)} />
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={handleCloseModal} />
           <div className="bg-white rounded-xl w-full max-w-lg relative z-10 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 border border-slate-200">
             <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-6 bg-rose-600 rounded-full"></div>
-                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Nuova Uscita</h2>
+                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest">
+                  {editingExpenseId ? 'Modifica Uscita' : 'Nuova Uscita'}
+                </h2>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+              <button onClick={handleCloseModal} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
                 <X size={18} className="text-slate-400" />
               </button>
             </div>
@@ -256,7 +298,7 @@ export default function ExpenseTracker({ expenses, setExpenses }: ExpenseTracker
               <div className="flex gap-4 pt-4">
                 <button 
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={handleCloseModal}
                   className="flex-1 px-6 py-3 border border-slate-200 rounded-lg font-bold text-xs text-slate-400 hover:bg-slate-50 transition-colors uppercase tracking-widest"
                 >
                   Annulla
@@ -266,7 +308,7 @@ export default function ExpenseTracker({ expenses, setExpenses }: ExpenseTracker
                   className="flex-1 px-6 py-3 bg-rose-600 text-white rounded-lg font-bold text-xs hover:bg-rose-700 transition-all uppercase tracking-widest shadow-lg shadow-rose-100 flex items-center justify-center gap-2"
                 >
                   <Check size={14} />
-                  Salva Uscita
+                  {editingExpenseId ? 'Salva Modifiche' : 'Salva Uscita'}
                 </button>
               </div>
             </form>

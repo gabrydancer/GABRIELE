@@ -42,6 +42,7 @@ export interface PaymentRecord {
   amount: number;
   description: string;
   date: string; // ISO string YYYY-MM-DD
+  receiptNumber?: number;
 }
 
 export interface ExpenseRecord {
