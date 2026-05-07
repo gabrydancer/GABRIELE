@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { X, Printer, Edit2, Check, CreditCard, Banknote, Download } from 'lucide-react';
+import { X, Printer, Edit2, Check, CreditCard, Banknote, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PaymentRecord, Person, Course } from '../types';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -15,7 +13,6 @@ interface ReceiptModalProps {
 
 export default function ReceiptModal({ isOpen, onClose, payment, student, course }: ReceiptModalProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [editableDetails, setEditableDetails] = useState({
     receiptNumber: payment.receiptNumber?.toString() || payment.id.substring(0, 8).toUpperCase(),
     date: payment.date,
@@ -33,40 +30,20 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
     window.print();
   };
 
-  const handleDownloadPDF = async () => {
-    const element = document.getElementById('printable-receipt');
-    if (!element) return;
-
-    setIsDownloading(true);
+  const handleSendEmail = () => {
+    const subject = encodeURIComponent(`Ricevuta N° ${editableDetails.receiptNumber} - ${editableDetails.studentName}`);
+    const body = encodeURIComponent(
+      `Gentile ${editableDetails.studentName},\n\n` +
+      `In allegato (o di seguito) i dettagli della ricevuta di pagamento:\n\n` +
+      `Ricevuta N°: ${editableDetails.receiptNumber}\n` +
+      `Data: ${new Date(editableDetails.date).toLocaleDateString('it-IT')}\n` +
+      `Importo: €${editableDetails.amount.toFixed(2)}\n` +
+      `Descrizione: ${editableDetails.description}\n` +
+      `Metodo di Pagamento: ${editableDetails.paymentMethod}\n\n` +
+      `Cordiali saluti,\nGabriele Chiesa`
+    );
     
-    try {
-      // Create canvas from element
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Ricevuta_${editableDetails.receiptNumber}_${editableDetails.studentName.replace(/\s+/g, '_')}.pdf`);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Si è verificato un errore durante la generazione del PDF. Prova ad usare la funzione di stampa del browser.');
-    } finally {
-      setIsDownloading(false);
-    }
+    window.location.href = `mailto:${student?.email || ''}?subject=${subject}&body=${body}`;
   };
 
   return (
@@ -105,12 +82,11 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
                 <span>{isEditing ? 'Conferma' : 'Modifica'}</span>
               </button>
               <button 
-                onClick={handleDownloadPDF}
-                disabled={isDownloading}
-                className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-white rounded-lg transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border border-transparent hover:border-slate-200 disabled:opacity-50"
+                onClick={handleSendEmail}
+                className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-white rounded-lg transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border border-transparent hover:border-slate-200"
               >
-                <Download size={16} className={isDownloading ? 'animate-bounce' : ''} />
-                <span>{isDownloading ? 'Salvataggio...' : 'PDF'}</span>
+                <Mail size={16} />
+                <span>Email</span>
               </button>
               <button 
                 onClick={handlePrint}
@@ -301,16 +277,22 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
           {/* Footer Actions - Hidden on Print */}
           <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-4 print:hidden">
             <button 
-              onClick={handleDownloadPDF}
-              disabled={isDownloading}
-              className="flex-1 bg-slate-900 text-white px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3 disabled:opacity-50"
+              onClick={handlePrint}
+              className="flex-1 bg-slate-900 text-white px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3"
             >
-              <Download size={16} className={isDownloading ? 'animate-bounce' : ''} />
-              {isDownloading ? 'Generazione...' : 'Salva su dispositivo'}
+              <Printer size={16} />
+              Stampa Ricevuta
+            </button>
+            <button 
+              onClick={handleSendEmail}
+              className="flex-1 bg-indigo-600 text-white px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-3"
+            >
+              <Mail size={16} />
+              Invia via Email
             </button>
             <button 
               onClick={onClose}
-              className="flex-1 bg-white border border-slate-200 text-slate-400 px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-50 transition-all"
+              className="px-8 bg-white border border-slate-200 text-slate-400 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-50 transition-all"
             >
               Chiudi
             </button>
