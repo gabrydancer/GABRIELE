@@ -59,24 +59,41 @@ export default function App() {
   });
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
 
   // Server Sync: Load
   useEffect(() => {
     const loadAppData = async () => {
       setSyncStatus('syncing');
-      const data = await api.getData();
-      if (data) {
-        if (data.people) setPeople(data.people);
-        if (data.courses) setCourses(data.courses);
-        if (data.attendance) setAttendance(data.attendance);
-        if (data.payments) setPayments(data.payments);
-        if (data.expenses) setExpenses(data.expenses);
-        setSyncStatus('idle');
-      } else {
+      try {
+        const data = await api.getData();
+        if (data) {
+          // If server has data, it wins. 
+          // If server is empty but local has data, we keep local (it will be saved to server on next change)
+          const isServerEmpty = !data.people?.length && !data.courses?.length && !data.payments?.length;
+          
+          if (!isServerEmpty) {
+            if (data.people) setPeople(data.people);
+            if (data.courses) setCourses(data.courses);
+            if (data.attendance) setAttendance(data.attendance);
+            if (data.payments) setPayments(data.payments);
+            if (data.expenses) setExpenses(data.expenses);
+            setSyncStatus('success');
+          } else {
+            console.log('Server is empty, keeping local data if present');
+            setSyncStatus('idle');
+          }
+          
+          setTimeout(() => setSyncStatus('idle'), 3000);
+        } else {
+          setSyncStatus('error');
+        }
+      } catch (error) {
+        console.error('Initial Load Error:', error);
         setSyncStatus('error');
+      } finally {
+        setIsInitialLoad(false);
       }
-      setIsInitialLoad(false);
     };
     loadAppData();
   }, []);
@@ -87,15 +104,25 @@ export default function App() {
 
     const saveTimeout = setTimeout(async () => {
       setSyncStatus('syncing');
-      const success = await api.saveData({
-        people,
-        courses,
-        attendance,
-        payments,
-        expenses
-      });
-      setSyncStatus(success ? 'idle' : 'error');
-    }, 1500);
+      try {
+        const success = await api.saveData({
+          people,
+          courses,
+          attendance,
+          payments,
+          expenses
+        });
+        if (success) {
+          setSyncStatus('success');
+          setTimeout(() => setSyncStatus('idle'), 2000);
+        } else {
+          setSyncStatus('error');
+        }
+      } catch (error) {
+        console.error('Save Error:', error);
+        setSyncStatus('error');
+      }
+    }, 2000);
 
     return () => clearTimeout(saveTimeout);
   }, [people, courses, attendance, payments, expenses, isInitialLoad]);
@@ -337,15 +364,23 @@ export default function App() {
 
         <footer className="h-8 bg-white border-t border-slate-200 px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-              Status: {syncStatus === 'syncing' ? 'Sincronizzazione...' : syncStatus === 'error' ? 'Errore Sync' : 'Sincronizzato'}
-            </p>
-            {syncStatus === 'syncing' && (
-              <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
-            )}
-            {syncStatus === 'error' && (
-              <div className="w-1.5 h-1.5 bg-rose-500 rounded-full"></div>
-            )}
+            <div className={cn(
+              "flex items-center gap-2 px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-widest transition-all",
+              syncStatus === 'syncing' ? "bg-indigo-50 border-indigo-100 text-indigo-500" :
+              syncStatus === 'error' ? "bg-rose-50 border-rose-100 text-rose-500" :
+              syncStatus === 'success' ? "bg-emerald-50 border-emerald-100 text-emerald-500" :
+              "bg-slate-50 border-slate-100 text-slate-400"
+            )}>
+              {syncStatus === 'syncing' && <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />}
+              {syncStatus === 'error' && <div className="w-1.5 h-1.5 bg-rose-500 rounded-full" />}
+              {syncStatus === 'success' && <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />}
+              <span>
+                {syncStatus === 'syncing' ? 'Sincronizzazione...' : 
+                 syncStatus === 'error' ? 'Errore Sync' : 
+                 syncStatus === 'success' ? 'Dati Salvati' : 
+                 'Sincronizzato'}
+              </span>
+            </div>
           </div>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
             {new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}

@@ -13,13 +13,13 @@ const DATA_FILE = path.join(__dirname, 'data.json');
 const readData = () => {
   try {
     if (!fs.existsSync(DATA_FILE)) {
-      return { students: [], courses: [], payments: [], expenses: [] };
+      return { people: [], courses: [], attendance: [], payments: [], expenses: [] };
     }
     const content = fs.readFileSync(DATA_FILE, 'utf-8');
     return JSON.parse(content);
   } catch (error) {
     console.error('Error reading data file:', error);
-    return { students: [], courses: [], payments: [], expenses: [] };
+    return { people: [], courses: [], attendance: [], payments: [], expenses: [] };
   }
 };
 
@@ -41,10 +41,13 @@ async function startServer() {
 
   // API Routes
   app.get('/api/data', (req, res) => {
-    res.json(readData());
+    const data = readData();
+    console.log(`[GET] /api/data - Returning ${Object.keys(data).length} keys`);
+    res.json(data);
   });
 
   app.post('/api/data', (req, res) => {
+    console.log(`[POST] /api/data - Receiving data update`);
     const success = writeData(req.body);
     if (success) {
       res.json({ status: 'ok' });

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { X, Printer, Edit2, Check, CreditCard, Banknote, Mail, Download } from 'lucide-react';
+import { X, Edit2, Check, Banknote, Download, ImageIcon, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PaymentRecord, Person, Course } from '../types';
 import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -28,61 +27,34 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
 
   if (!isOpen) return null;
 
-  const handlePrint = () => {
-    window.focus();
-    window.print();
-  };
-
-  const handleDownloadPDF = async () => {
+  const handleDownloadJPG = async () => {
     const element = document.getElementById('printable-receipt');
     if (!element) return;
 
     setIsDownloading(true);
     
     try {
-      // Create canvas from element
+      // Create canvas from element with high scale for better quality
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
       });
       
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
+      // Convert to JPG and download
+      const link = document.createElement('a');
+      const fileName = `Ricevuta_${editableDetails.receiptNumber}_${editableDetails.studentName.replace(/\s+/g, '_')}.jpg`;
       
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Ricevuta_${editableDetails.receiptNumber}_${editableDetails.studentName.replace(/\s+/g, '_')}.pdf`);
+      link.download = fileName;
+      link.href = canvas.toDataURL('image/jpeg', 0.9);
+      link.click();
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Si è verificato un errore durante la generazione del PDF. Prova ad usare la funzione di stampa del browser.');
+      console.error('Error generating JPG:', error);
+      alert('Si è verificato un errore durante la generazione dell\'immagine.');
     } finally {
       setIsDownloading(false);
     }
-  };
-
-  const handleSendEmail = () => {
-    const subject = encodeURIComponent(`Ricevuta N° ${editableDetails.receiptNumber} - ${editableDetails.studentName}`);
-    const body = encodeURIComponent(
-      `Gentile ${editableDetails.studentName},\n\n` +
-      `In allegato (o di seguito) i dettagli della ricevuta di pagamento:\n\n` +
-      `Ricevuta N°: ${editableDetails.receiptNumber}\n` +
-      `Data: ${new Date(editableDetails.date).toLocaleDateString('it-IT')}\n` +
-      `Importo: €${editableDetails.amount.toFixed(2)}\n` +
-      `Descrizione: ${editableDetails.description}\n` +
-      `Metodo di Pagamento: ${editableDetails.paymentMethod}\n\n` +
-      `Cordiali saluti,\nGabriele Chiesa`
-    );
-    
-    window.location.href = `mailto:${student?.email || ''}?subject=${subject}&body=${body}`;
   };
 
   return (
@@ -121,19 +93,12 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
                 <span>{isEditing ? 'Conferma' : 'Modifica'}</span>
               </button>
               <button 
-                onClick={handleSendEmail}
-                className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-white rounded-lg transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border border-transparent hover:border-slate-200"
-              >
-                <Mail size={16} />
-                <span>Email</span>
-              </button>
-              <button 
-                onClick={handleDownloadPDF}
+                onClick={handleDownloadJPG}
                 disabled={isDownloading}
                 className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-white rounded-lg transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border border-transparent hover:border-slate-200 disabled:opacity-50"
               >
-                <Download size={16} className={isDownloading ? 'animate-bounce' : ''} />
-                <span>{isDownloading ? 'Salvataggio...' : 'PDF'}</span>
+                <ImageIcon size={16} className={isDownloading ? 'animate-bounce' : ''} />
+                <span>{isDownloading ? 'Salvataggio...' : 'JPG'}</span>
               </button>
               <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-colors ml-2">
                 <X size={18} className="text-slate-400" />
@@ -316,19 +281,12 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
 
           <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-4 print:hidden">
             <button 
-              onClick={handleDownloadPDF}
+              onClick={handleDownloadJPG}
               disabled={isDownloading}
               className="flex-1 bg-slate-900 text-white px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3 disabled:opacity-50"
             >
-              <Download size={16} className={isDownloading ? 'animate-bounce' : ''} />
-              {isDownloading ? 'Generazione...' : 'Salva su dispositivo'}
-            </button>
-            <button 
-              onClick={handleSendEmail}
-              className="flex-1 bg-indigo-600 text-white px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-3"
-            >
-              <Mail size={16} />
-              Invia via Email
+              <ImageIcon size={16} className={isDownloading ? 'animate-bounce' : ''} />
+              {isDownloading ? 'Generazione...' : 'Salva Immagine (JPG)'}
             </button>
             <button 
               onClick={onClose}
