@@ -61,6 +61,44 @@ export default function App() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
 
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('payment_status');
+    const paymentId = urlParams.get('payment_id');
+
+    if (status === 'success' && paymentId) {
+      // Clear URL params
+      window.history.replaceState({}, '', '/');
+      
+      // Add a success notification
+      const id = `stripe-success-${Date.now()}`;
+      setNotifications([{
+        id,
+        type: 'payment',
+        title: 'Pagamento Completato',
+        message: `Il pagamento online è stato elaborato con successo. ID: ${paymentId}`,
+        date: Date.now(),
+        read: false,
+        link: 'payments'
+      }, ...notifications]);
+      
+      // Ideally we should update the payment record status here, but since it's a demo
+      // we'll just notify the user. In a real app, a webhook would handle this.
+    } else if (status === 'cancel') {
+      window.history.replaceState({}, '', '/');
+      const id = `stripe-cancel-${Date.now()}`;
+      setNotifications([{
+        id,
+        type: 'payment',
+        title: 'Pagamento Annullato',
+        message: `Il pagamento online è stato annullato.`,
+        date: Date.now(),
+        read: false,
+        link: 'payments'
+      }, ...notifications]);
+    }
+  }, [notifications, setNotifications]);
+
   // Server Sync: Load
   useEffect(() => {
     const loadAppData = async () => {

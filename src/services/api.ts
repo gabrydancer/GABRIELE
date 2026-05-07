@@ -25,5 +25,25 @@ export const api = {
       console.error('API Error:', error);
       return null;
     }
+  },
+
+  async createStripeSession(paymentData: { amount: number, description: string, studentName: string, paymentId: string }) {
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentData),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create payment session');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Stripe API Error:', error);
+      throw error;
+    }
   }
 };

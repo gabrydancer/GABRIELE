@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, Printer, Edit2, Check, CreditCard, Banknote, Mail } from 'lucide-react';
+import { X, Printer, Edit2, Check, CreditCard, Banknote, Mail, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PaymentRecord, Person, Course } from '../types';
+import { api } from '../services/api';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface ReceiptModalProps {
 
 export default function ReceiptModal({ isOpen, onClose, payment, student, course }: ReceiptModalProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
   const [editableDetails, setEditableDetails] = useState({
     receiptNumber: payment.receiptNumber?.toString() || payment.id.substring(0, 8).toUpperCase(),
     date: payment.date,
@@ -28,6 +30,26 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
   const handlePrint = () => {
     window.focus();
     window.print();
+  };
+
+  const handleStripePayment = async () => {
+    setIsPaying(true);
+    try {
+      const { url } = await api.createStripeSession({
+        amount: editableDetails.amount,
+        description: editableDetails.description,
+        studentName: editableDetails.studentName,
+        paymentId: payment.id
+      });
+      
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error: any) {
+      alert(error.message || 'Errore nella creazione della sessione di pagamento');
+    } finally {
+      setIsPaying(false);
+    }
   };
 
   const handleSendEmail = () => {
@@ -87,6 +109,14 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
               >
                 <Mail size={16} />
                 <span>Email</span>
+              </button>
+              <button 
+                onClick={handleStripePayment}
+                disabled={isPaying}
+                className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-lg transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border border-transparent hover:border-slate-200 disabled:opacity-50"
+              >
+                <ExternalLink size={16} className={isPaying ? 'animate-spin' : ''} />
+                <span>{isPaying ? 'Attendi...' : 'Paga'}</span>
               </button>
               <button 
                 onClick={handlePrint}
@@ -289,6 +319,14 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
             >
               <Mail size={16} />
               Invia via Email
+            </button>
+            <button 
+              onClick={handleStripePayment}
+              disabled={isPaying}
+              className="flex-1 bg-emerald-600 text-white px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+              <CreditCard size={16} className={isPaying ? 'animate-pulse' : ''} />
+              {isPaying ? 'Generazione Link...' : 'Pagamento Online'}
             </button>
             <button 
               onClick={onClose}
