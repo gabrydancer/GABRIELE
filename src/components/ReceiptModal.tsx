@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { X, Edit2, Check, Banknote, Download, ImageIcon, CreditCard, Printer } from 'lucide-react';
+import { X, Edit2, Check, Banknote, CreditCard, Printer } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PaymentRecord, Person, Course } from '../types';
-import html2canvas from 'html2canvas';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -14,14 +13,14 @@ interface ReceiptModalProps {
 
 export default function ReceiptModal({ isOpen, onClose, payment, student, course }: ReceiptModalProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [editableDetails, setEditableDetails] = useState({
     receiptNumber: payment.receiptNumber?.toString() || payment.id.substring(0, 8).toUpperCase(),
     date: payment.date,
     amount: payment.amount,
     description: course ? `Iscrizione Corso: ${course.name}` : payment.description,
-    paymentMethod: payment.description.toLowerCase().includes('contanti') ? 'Contanti' : 
-                   payment.description.toLowerCase().includes('carta') ? 'Carta' : 'Contanti',
+    paymentMethod: payment.paymentMethod ? (payment.paymentMethod.charAt(0).toUpperCase() + payment.paymentMethod.slice(1)) : 
+                   (payment.description.toLowerCase().includes('contanti') ? 'Contanti' : 
+                    payment.description.toLowerCase().includes('carta') ? 'Carta' : 'Contanti'),
     studentName: student?.name || 'Utente'
   });
 
@@ -30,36 +29,6 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
   const handlePrint = () => {
     window.focus();
     window.print();
-  };
-
-  const handleDownloadJPG = async () => {
-    const element = document.getElementById('printable-receipt');
-    if (!element) return;
-
-    setIsDownloading(true);
-    
-    try {
-      // Create canvas from element with high scale for better quality
-      const canvas = await html2canvas(element, {
-        scale: 3,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-      
-      // Convert to JPG and download
-      const link = document.createElement('a');
-      const fileName = `Ricevuta_${editableDetails.receiptNumber}_${editableDetails.studentName.replace(/\s+/g, '_')}.jpg`;
-      
-      link.download = fileName;
-      link.href = canvas.toDataURL('image/jpeg', 0.9);
-      link.click();
-    } catch (error) {
-      console.error('Error generating JPG:', error);
-      alert('Si è verificato un errore durante la generazione dell\'immagine.');
-    } finally {
-      setIsDownloading(false);
-    }
   };
 
   return (
@@ -103,14 +72,6 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
               >
                 <Printer size={16} />
                 <span>Stampa</span>
-              </button>
-              <button 
-                onClick={handleDownloadJPG}
-                disabled={isDownloading}
-                className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-white rounded-lg transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border border-transparent hover:border-slate-200 disabled:opacity-50"
-              >
-                <ImageIcon size={16} className={isDownloading ? 'animate-bounce' : ''} />
-                <span>{isDownloading ? 'Salvataggio...' : 'JPG'}</span>
               </button>
               <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-colors ml-2">
                 <X size={18} className="text-slate-400" />
@@ -298,14 +259,6 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
             >
               <Printer size={16} />
               Stampa Ricevuta
-            </button>
-            <button 
-              onClick={handleDownloadJPG}
-              disabled={isDownloading}
-              className="flex-1 bg-white border border-slate-200 text-slate-600 px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-            >
-              <ImageIcon size={16} className={isDownloading ? 'animate-bounce' : ''} />
-              {isDownloading ? 'Generazione...' : 'Salva JPG'}
             </button>
             <button 
               onClick={onClose}

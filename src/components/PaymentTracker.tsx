@@ -19,12 +19,20 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
   const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(null);
   const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] = useState<PaymentRecord | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    studentId: string;
+    courseId: string;
+    amount: string;
+    description: string;
+    date: string;
+    paymentMethod: PaymentRecord['paymentMethod'];
+  }>({
     studentId: '',
     courseId: '',
     amount: '',
     description: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    paymentMethod: 'contanti'
   });
 
   const selectedStudent = people.find(p => p.id === formData.studentId);
@@ -53,8 +61,12 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
     if (editingPaymentId) {
       setPayments(payments.map(p => p.id === editingPaymentId ? {
         ...p,
-        ...formData,
-        amount: Number(formData.amount)
+        studentId: formData.studentId,
+        courseId: formData.courseId,
+        amount: Number(formData.amount),
+        description: formData.description,
+        date: formData.date,
+        paymentMethod: formData.paymentMethod
       } : p));
     } else {
       const nextReceiptNumber = payments.length > 0 
@@ -63,8 +75,12 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
 
       const newPayment: PaymentRecord = {
         id: crypto.randomUUID(),
-        ...formData,
+        studentId: formData.studentId,
+        courseId: formData.courseId,
         amount: Number(formData.amount),
+        description: formData.description,
+        date: formData.date,
+        paymentMethod: formData.paymentMethod,
         receiptNumber: nextReceiptNumber
       };
       setPayments([...payments, newPayment]);
@@ -77,7 +93,8 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
       courseId: '',
       amount: '',
       description: '',
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().split('T')[0],
+      paymentMethod: 'contanti'
     });
   };
 
@@ -88,7 +105,8 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
       courseId: payment.courseId || '',
       amount: payment.amount.toString(),
       description: payment.description,
-      date: payment.date
+      date: payment.date,
+      paymentMethod: payment.paymentMethod || 'contanti'
     });
     setIsModalOpen(true);
   };
@@ -101,7 +119,8 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
       courseId: '',
       amount: '',
       description: '',
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().split('T')[0],
+      paymentMethod: 'contanti'
     });
   };
 
@@ -180,6 +199,7 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">N° Ricevuta</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Contribuente</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Causale</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Metodo</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Data</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Monto</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Azioni</th>
@@ -213,6 +233,17 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
                           </span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={cn(
+                        "inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider",
+                        p.paymentMethod === 'contanti' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
+                        p.paymentMethod === 'carta' ? "bg-indigo-50 text-indigo-600 border border-indigo-100" :
+                        p.paymentMethod === 'bonifico' ? "bg-amber-50 text-amber-600 border border-amber-100" :
+                        "bg-slate-50 text-slate-600 border border-slate-100"
+                      )}>
+                        {p.paymentMethod || 'contanti'}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-xs text-slate-400 font-bold tabular-nums">
@@ -348,16 +379,30 @@ export default function PaymentTracker({ payments, setPayments, people, courses 
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-[0.2em]">Metodo/Note</label>
-                    <input 
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-[0.2em]">Metodo Pagamento</label>
+                    <select 
                       required
-                      type="text" 
-                      placeholder="Contanti, Bonifico..."
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-semibold text-slate-600 text-sm"
-                      value={formData.description}
-                      onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    />
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-slate-800 text-sm appearance-none cursor-pointer"
+                      value={formData.paymentMethod}
+                      onChange={(e) => setFormData({...formData, paymentMethod: e.target.value as PaymentRecord['paymentMethod']})}
+                    >
+                      <option value="contanti">Contanti</option>
+                      <option value="carta">Carta</option>
+                      <option value="bonifico">Bonifico</option>
+                      <option value="altro">Altro</option>
+                    </select>
                   </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-[0.2em]">Note / Causale</label>
+                  <input 
+                    required
+                    type="text" 
+                    placeholder="E es. Iscrizione mese di Maggio"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-semibold text-slate-600 text-sm"
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  />
                 </div>
               </div>
               <div className="flex gap-4 pt-4">

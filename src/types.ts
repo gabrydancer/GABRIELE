@@ -43,6 +43,7 @@ export interface PaymentRecord {
   description: string;
   date: string; // ISO string YYYY-MM-DD
   receiptNumber?: number;
+  paymentMethod?: 'contanti' | 'carta' | 'bonifico' | 'altro';
 }
 
 export interface ExpenseRecord {
