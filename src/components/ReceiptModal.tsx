@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { X, Printer, Edit2, Check, CreditCard, Banknote, Mail, ExternalLink } from 'lucide-react';
+import { X, Printer, Edit2, Check, CreditCard, Banknote, Mail, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PaymentRecord, Person, Course } from '../types';
-import { api } from '../services/api';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -14,7 +15,7 @@ interface ReceiptModalProps {
 
 export default function ReceiptModal({ isOpen, onClose, payment, student, course }: ReceiptModalProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [isPaying, setIsPaying] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [editableDetails, setEditableDetails] = useState({
     receiptNumber: payment.receiptNumber?.toString() || payment.id.substring(0, 8).toUpperCase(),
     date: payment.date,
@@ -32,23 +33,39 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
     window.print();
   };
 
-  const handleStripePayment = async () => {
-    setIsPaying(true);
+  const handleDownloadPDF = async () => {
+    const element = document.getElementById('printable-receipt');
+    if (!element) return;
+
+    setIsDownloading(true);
+    
     try {
-      const { url } = await api.createStripeSession({
-        amount: editableDetails.amount,
-        description: editableDetails.description,
-        studentName: editableDetails.studentName,
-        paymentId: payment.id
+      // Create canvas from element
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
       });
       
-      if (url) {
-        window.location.href = url;
-      }
-    } catch (error: any) {
-      alert(error.message || 'Errore nella creazione della sessione di pagamento');
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Ricevuta_${editableDetails.receiptNumber}_${editableDetails.studentName.replace(/\s+/g, '_')}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Si è verificato un errore durante la generazione del PDF. Prova ad usare la funzione di stampa del browser.');
     } finally {
-      setIsPaying(false);
+      setIsDownloading(false);
     }
   };
 
@@ -111,19 +128,12 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
                 <span>Email</span>
               </button>
               <button 
-                onClick={handleStripePayment}
-                disabled={isPaying}
-                className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-lg transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border border-transparent hover:border-slate-200 disabled:opacity-50"
+                onClick={handleDownloadPDF}
+                disabled={isDownloading}
+                className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-white rounded-lg transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border border-transparent hover:border-slate-200 disabled:opacity-50"
               >
-                <ExternalLink size={16} className={isPaying ? 'animate-spin' : ''} />
-                <span>{isPaying ? 'Attendi...' : 'Paga'}</span>
-              </button>
-              <button 
-                onClick={handlePrint}
-                className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-lg transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border border-transparent hover:border-slate-200"
-              >
-                <Printer size={16} />
-                <span>Stampa</span>
+                <Download size={16} className={isDownloading ? 'animate-bounce' : ''} />
+                <span>{isDownloading ? 'Salvataggio...' : 'PDF'}</span>
               </button>
               <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-colors ml-2">
                 <X size={18} className="text-slate-400" />
@@ -304,14 +314,14 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
             </div>
           </div>
 
-          {/* Footer Actions - Hidden on Print */}
           <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-4 print:hidden">
             <button 
-              onClick={handlePrint}
-              className="flex-1 bg-slate-900 text-white px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3"
+              onClick={handleDownloadPDF}
+              disabled={isDownloading}
+              className="flex-1 bg-slate-900 text-white px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3 disabled:opacity-50"
             >
-              <Printer size={16} />
-              Stampa Ricevuta
+              <Download size={16} className={isDownloading ? 'animate-bounce' : ''} />
+              {isDownloading ? 'Generazione...' : 'Salva su dispositivo'}
             </button>
             <button 
               onClick={handleSendEmail}
@@ -319,14 +329,6 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
             >
               <Mail size={16} />
               Invia via Email
-            </button>
-            <button 
-              onClick={handleStripePayment}
-              disabled={isPaying}
-              className="flex-1 bg-emerald-600 text-white px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 flex items-center justify-center gap-3 disabled:opacity-50"
-            >
-              <CreditCard size={16} className={isPaying ? 'animate-pulse' : ''} />
-              {isPaying ? 'Generazione Link...' : 'Pagamento Online'}
             </button>
             <button 
               onClick={onClose}

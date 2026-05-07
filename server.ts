@@ -3,21 +3,11 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import Stripe from 'stripe';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DATA_FILE = path.join(__dirname, 'data.json');
-
-// Lazy initialization of Stripe
-let stripe: Stripe | null = null;
-const getStripe = () => {
-  if (!stripe && process.env.STRIPE_SECRET_KEY) {
-    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-  }
-  return stripe;
-};
 
 // Helper to read and write data safely
 const readData = () => {
@@ -60,47 +50,6 @@ async function startServer() {
       res.json({ status: 'ok' });
     } else {
       res.status(500).json({ error: 'Failed to save data' });
-    }
-  });
-
-  // Stripe Checkout Session
-  app.post('/api/create-checkout-session', async (req, res) => {
-    const stripeClient = getStripe();
-    if (!stripeClient) {
-      return res.status(503).json({ error: 'Stripe non configurato sul server' });
-    }
-
-    const { amount, description, studentName, paymentId } = req.body;
-
-    try {
-      const session = await stripeClient.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: 'eur',
-              product_data: {
-                name: `Pagamento ${studentName}`,
-                description: description || 'Pagamento corso',
-              },
-              unit_amount: Math.round(amount * 100), // Stripe uses cents
-            },
-            quantity: 1,
-          },
-        ],
-        mode: 'payment',
-        success_url: `${process.env.APP_URL || 'http://localhost:3000'}/?payment_status=success&payment_id=${paymentId}`,
-        cancel_url: `${process.env.APP_URL || 'http://localhost:3000'}/?payment_status=cancel&payment_id=${paymentId}`,
-        metadata: {
-          paymentId,
-          studentName,
-        },
-      });
-
-      res.json({ url: session.url });
-    } catch (error: any) {
-      console.error('Stripe Session Error:', error);
-      res.status(500).json({ error: error.message });
     }
   });
 
