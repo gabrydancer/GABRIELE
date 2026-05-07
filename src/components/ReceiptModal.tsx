@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Edit2, Check, Banknote, Download, ImageIcon, CreditCard } from 'lucide-react';
+import { X, Edit2, Check, Banknote, Download, ImageIcon, CreditCard, Printer } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PaymentRecord, Person, Course } from '../types';
 import html2canvas from 'html2canvas';
@@ -26,6 +26,11 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
   });
 
   if (!isOpen) return null;
+
+  const handlePrint = () => {
+    window.focus();
+    window.print();
+  };
 
   const handleDownloadJPG = async () => {
     const element = document.getElementById('printable-receipt');
@@ -91,6 +96,13 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
               >
                 {isEditing ? <Check size={16} /> : <Edit2 size={16} />}
                 <span>{isEditing ? 'Conferma' : 'Modifica'}</span>
+              </button>
+              <button 
+                onClick={handlePrint}
+                className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-lg transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border border-transparent hover:border-slate-200"
+              >
+                <Printer size={16} />
+                <span>Stampa</span>
               </button>
               <button 
                 onClick={handleDownloadJPG}
@@ -279,18 +291,25 @@ export default function ReceiptModal({ isOpen, onClose, payment, student, course
             </div>
           </div>
 
-          <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-4 print:hidden">
+          <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-4 print:hidden text-center">
+            <button 
+              onClick={handlePrint}
+              className="flex-1 bg-slate-900 text-white px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3"
+            >
+              <Printer size={16} />
+              Stampa Ricevuta
+            </button>
             <button 
               onClick={handleDownloadJPG}
               disabled={isDownloading}
-              className="flex-1 bg-slate-900 text-white px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3 disabled:opacity-50"
+              className="flex-1 bg-white border border-slate-200 text-slate-600 px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
             >
               <ImageIcon size={16} className={isDownloading ? 'animate-bounce' : ''} />
-              {isDownloading ? 'Generazione...' : 'Salva Immagine (JPG)'}
+              {isDownloading ? 'Generazione...' : 'Salva JPG'}
             </button>
             <button 
               onClick={onClose}
-              className="px-8 bg-white border border-slate-200 text-slate-400 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-50 transition-all"
+              className="px-8 bg-slate-200 text-slate-500 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-300 transition-all"
             >
               Chiudi
             </button>
