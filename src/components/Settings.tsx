@@ -1,12 +1,75 @@
-import { Bell, CreditCard, Calendar, BookOpen } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, CreditCard, Calendar, BookOpen, Cloud, RefreshCw, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react';
+import { motion } from 'motion/react';
 import { UserPreferences } from '../types';
+import { cn } from '../lib/utils';
 
 interface SettingsProps {
   preferences: UserPreferences;
   setPreferences: (prefs: UserPreferences) => void;
+  onDataImport?: () => void;
 }
 
-export default function Settings({ preferences, setPreferences }: SettingsProps) {
+export default function Settings({ preferences, setPreferences, onDataImport }: SettingsProps) {
+  const [isDriveConnected, setIsDriveConnected] = useState<boolean | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
+
+  useEffect(() => {
+    checkDriveStatus();
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+        setIsDriveConnected(true);
+        handleSync();
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  const checkDriveStatus = async () => {
+    try {
+      const res = await fetch('/api/auth/status');
+      const data = await res.json();
+      setIsDriveConnected(data.connected);
+    } catch (e) {
+      console.error('Failed to check drive status:', e);
+    }
+  };
+
+  const handleConnect = async () => {
+    try {
+      const res = await fetch('/api/auth/url');
+      const { url } = await res.json();
+      if (url) {
+        window.open(url, 'google_auth', 'width=600,height=700');
+      }
+    } catch (e) {
+      console.error('Failed to get auth URL:', e);
+    }
+  };
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    setSyncMessage('Sincronizzazione in corso...');
+    try {
+      const res = await fetch('/api/sync/drive', { method: 'POST' });
+      if (res.ok) {
+        setSyncMessage('Sincronizzazione completata!');
+        if (onDataImport) onDataImport();
+      } else {
+        setSyncMessage('Errore durante la sincronizzazione.');
+      }
+    } catch (e) {
+      setSyncMessage('Errore di connessione.');
+    } finally {
+      setTimeout(() => {
+        setIsSyncing(false);
+        setSyncMessage('');
+      }, 3000);
+    }
+  };
 
   const togglePreference = (key: keyof UserPreferences) => {
     setPreferences({
@@ -16,10 +79,83 @@ export default function Settings({ preferences, setPreferences }: SettingsProps)
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-2xl mx-auto space-y-8 pb-12">
       <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rotate-45 translate-x-16 -translate-y-16"></div>
         <div className="relative z-10">
+          
+          {/* Cloud Sync Section */}
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-1 h-6 bg-blue-600 rounded-full"></div>
+              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Cloud Sync (Google Drive)</h2>
+            </div>
+            
+            <div className={cn(
+              "p-6 rounded-xl border transition-all duration-300",
+              isDriveConnected 
+                ? "bg-emerald-50/30 border-emerald-100" 
+                : "bg-slate-50 border-slate-100"
+            )}>
+              <div className="flex items-start gap-4">
+                <div className={cn(
+                  "w-12 h-12 rounded-xl flex items-center justify-center shadow-sm border",
+                  isDriveConnected ? "bg-emerald-500 text-white border-emerald-400" : "bg-white text-slate-400 border-slate-100"
+                )}>
+                  <Cloud size={24} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-sm font-bold text-slate-800">
+                      {isDriveConnected ? 'Google Drive Collegato' : 'Salva su Google Drive'}
+                    </h3>
+                    {isDriveConnected && <CheckCircle2 size={14} className="text-emerald-500" />}
+                  </div>
+                  <p className="text-xs text-slate-500 leading-relaxed max-w-sm mb-4">
+                    {isDriveConnected 
+                      ? 'I tuoi dati vengono sincronizzati automaticamente su Google Drive ogni volta che effettui una modifica.' 
+                      : 'Collega il tuo account Google per salvare automaticamente il database su Drive come file JSON sicuro.'}
+                  </p>
+                  
+                  <div className="flex flex-wrap gap-3">
+                    {isDriveConnected ? (
+                      <button 
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all shadow-sm shadow-emerald-200 disabled:opacity-50"
+                      >
+                        <RefreshCw size={14} className={cn(isSyncing && "animate-spin")} />
+                        {isSyncing ? 'Sincronizzazione...' : 'Sincronizza Ora'}
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={handleConnect}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all shadow-sm shadow-indigo-200"
+                      >
+                        <ExternalLink size={14} />
+                        Configura Google Drive
+                      </button>
+                    )}
+                  </div>
+                  
+                  {syncMessage && (
+                    <motion.p 
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-[9px] font-bold text-emerald-600 mt-3 uppercase tracking-widest"
+                    >
+                      {syncMessage}
+                    </motion.p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-[10px] text-slate-400 mt-4 leading-relaxed italic">
+              * Nota: Per configurare l'integrazione è necessario impostare le credenziali Google OAuth (Client ID e Secret) nel pannello dei Segreti di AI Studio.
+            </p>
+          </div>
+
           <div className="flex items-center gap-3 mb-6">
             <div className="w-1 h-6 bg-indigo-600 rounded-full"></div>
             <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Configurazione Notifiche</h2>

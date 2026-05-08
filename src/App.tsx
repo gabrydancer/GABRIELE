@@ -98,6 +98,26 @@ export default function App() {
     loadAppData();
   }, []);
 
+  const reloadAppData = async () => {
+    setSyncStatus('syncing');
+    try {
+      const data = await api.getData();
+      if (data) {
+        if (data.people) setPeople(data.people);
+        if (data.courses) setCourses(data.courses);
+        if (data.attendance) setAttendance(data.attendance);
+        if (data.payments) setPayments(data.payments);
+        if (data.expenses) setExpenses(data.expenses);
+        setSyncStatus('success');
+      }
+    } catch (error) {
+      console.error('Reload Error:', error);
+      setSyncStatus('error');
+    } finally {
+      setTimeout(() => setSyncStatus('idle'), 2000);
+    }
+  };
+
   // Server Sync: Save
   useEffect(() => {
     if (isInitialLoad) return;
@@ -261,6 +281,7 @@ export default function App() {
         return <Settings 
           preferences={preferences}
           setPreferences={setPreferences}
+          onDataImport={reloadAppData}
         />;
       default:
         return <Dashboard 
